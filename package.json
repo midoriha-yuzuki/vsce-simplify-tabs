@@ -1,6 +1,6 @@
 {
-  "name": "simplify-tabs3",
-  "displayName": "Simplify Tabs3",
+  "name": "simplify-tabs",
+  "displayName": "simplify-tabs",
   "description": "",
   "version": "0.0.1",
   "engines": {
@@ -9,15 +9,82 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
   "main": "./dist/extension.js",
   "contributes": {
+    "configuration": [
+      {
+        "title": "Simplify Tabs",
+        "properties": {
+          "simplifyTabs.closeTabs.enableAuto": {
+            "type": "boolean",
+            "default": true,
+            "description": "Automatically close tabs when they are not in use."
+          },
+          "simplifyTabs.closeTabs.retainingTabCount": {
+            "type": "number",
+            "default": 10,
+            "description": "Number of tabs to retain when closing tabs. If set to less than 0, all tabs will be retained."
+          },
+          "simplifyTabs.closeTabs.waitingTime": {
+            "type": "number",
+            "default": 3600,
+            "description": "Delay closing tabs when they are not in use."
+          },
+          "simplifyTabs.closeTabs.isDirtyTabRemovalAllowed": {
+            "type": "boolean",
+            "default": false,
+            "description": "Allow closing dirty tabs."
+          },
+          "simplifyTabs.closeTabs.isActiveTabRemovalAllowed": {
+            "type": "boolean",
+            "default": false,
+            "description": "Allow closing active tabs."
+          },
+          "simplifyTabs.closeTabs.shiftByPinnedTab": {
+            "type": "boolean",
+            "default": true,
+            "description": "Shift the number of tabs to retain to the right by the number of pinned tabs."
+          },
+          "simplifyTabs.closeTabsHistory.maximumDisplayCountInHistory": {
+            "type": "number",
+            "default": 20,
+            "description": "Maximum display count in history."
+          },
+          "simplifyTabs.alignTabs.enableAuto": {
+            "type": "boolean",
+            "default": true,
+            "description": "Automatically close tabs when they are active."
+          },
+          "simplifyTabs.alignTabs.delayTime": {
+            "type": "number",
+            "default": 5,
+            "description": "Delay time for moving tabs."
+          },
+          "simplifyTabs.alignTabs.canMovePinnedTab": {
+            "type": "boolean",
+            "default": true,
+            "description": "Allow moving pinned tabs."
+          }
+        }
+      }
+    ],
     "commands": [
       {
-        "command": "simplify-tabs3.helloWorld",
-        "title": "Hello World"
+        "command": "simplifyTabs.refreshClosingTabsView",
+        "title": "Refresh ClosingTabsView"
       }
-    ]
+    ],
+    "views": {
+      "explorer": [
+        {
+          "id": "simplifyTabs.closingTabsView",
+          "name": "Simplify Tabs"
+        }
+      ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "pnpm run package",
