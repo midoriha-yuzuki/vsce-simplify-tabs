@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import { Config } from "./common";
 
 export class FileItem extends vscode.TreeItem {
   constructor(
@@ -27,9 +28,9 @@ export class ClosingTabsProvider implements vscode.TreeDataProvider<FileItem> {
 
   maximumDisplayCount: number;
 
-  constructor(maximumDisplayCount: number) {
+  constructor(props: Config) {
     this.fileItems = [];
-    this.maximumDisplayCount = maximumDisplayCount;
+    this.maximumDisplayCount = props.maximumDisplayCount;
   }
 
   refresh(fileItem?: FileItem): void {
@@ -55,8 +56,3 @@ export class ClosingTabsProvider implements vscode.TreeDataProvider<FileItem> {
     return this.fileItems;
   }
 }
-
-const logInfo = (...args: any[]) => {
-  console.log(PREF, ...args);
-};
-const PREF = "Simplify-Tabs: ";

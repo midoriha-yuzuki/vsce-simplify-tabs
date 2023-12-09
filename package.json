@@ -1,7 +1,7 @@
 {
   "name": "simplify-tabs",
-  "displayName": "simplify-tabs",
-  "description": "",
+  "displayName": "Simplify Tabs",
+  "description": "Automatically organize tabs and close unnecessary ones to maintain a simple tab layout.",
   "version": "0.0.1",
   "engines": {
     "vscode": "^1.85.0"
@@ -18,55 +18,45 @@
       {
         "title": "Simplify Tabs",
         "properties": {
-          "simplifyTabs.closeTabs.enableAuto": {
+          "simplifyTabs.closeTabs.enabled": {
             "type": "boolean",
             "default": true,
             "description": "Automatically close tabs when they are not in use."
           },
-          "simplifyTabs.closeTabs.retainingTabCount": {
+          "simplifyTabs.closeTabs.retentionNumber": {
             "type": "number",
-            "default": 10,
+            "default": 8,
             "description": "Number of tabs to retain when closing tabs. If set to less than 0, all tabs will be retained."
           },
-          "simplifyTabs.closeTabs.waitingTime": {
+          "simplifyTabs.closeTabs.delay": {
             "type": "number",
-            "default": 3600,
-            "description": "Delay closing tabs when they are not in use."
-          },
-          "simplifyTabs.closeTabs.isDirtyTabRemovalAllowed": {
-            "type": "boolean",
-            "default": false,
-            "description": "Allow closing dirty tabs."
-          },
-          "simplifyTabs.closeTabs.isActiveTabRemovalAllowed": {
-            "type": "boolean",
-            "default": false,
-            "description": "Allow closing active tabs."
+            "default": 600,
+            "description": "Delay time when closing unused tabs."
           },
           "simplifyTabs.closeTabs.shiftByPinnedTab": {
             "type": "boolean",
             "default": true,
-            "description": "Shift the number of tabs to retain to the right by the number of pinned tabs."
+            "description": "Shift the number of tabs to retain based on the number of pinned tabs."
           },
-          "simplifyTabs.closeTabsHistory.maximumDisplayCountInHistory": {
+          "simplifyTabs.closedTabsHistory.maxListItems": {
             "type": "number",
             "default": 20,
-            "description": "Maximum display count in history."
+            "description": "Number of closed tabs to display in history."
           },
-          "simplifyTabs.alignTabs.enableAuto": {
+          "simplifyTabs.alignLeftTabs.enabled": {
             "type": "boolean",
             "default": true,
-            "description": "Automatically close tabs when they are active."
+            "description": "Automatically align tabs to the left."
           },
-          "simplifyTabs.alignTabs.delayTime": {
+          "simplifyTabs.alignLeftTabs.delay": {
             "type": "number",
             "default": 5,
-            "description": "Delay time for moving tabs."
+            "description": "Delay time when aligning tabs to the left."
           },
-          "simplifyTabs.alignTabs.canMovePinnedTab": {
+          "simplifyTabs.alignLeftTabs.movePinnedTab": {
             "type": "boolean",
             "default": true,
-            "description": "Allow moving pinned tabs."
+            "description": "Align pinned tabs to the left."
           }
         }
       }
