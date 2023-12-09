@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { FileItem } from "./closingTabsView";
 import { outputChanel } from "./extension";
+import { minimatch } from "minimatch";
 
 export type Config = {
   enableAutoClose: boolean;
@@ -9,6 +10,7 @@ export type Config = {
   isShiftByPinnedTab: boolean;
   isDirtyTabRemovalAllowed: boolean;
   isActiveTabRemovalAllowed: boolean;
+  overrideGlobList: { [glob: string]: string };
 
   maximumDisplayCount: number;
 
@@ -22,6 +24,14 @@ export type TabInfo = {
   key: string;
   tab: vscode.Tab;
   tabGroup: vscode.TabGroup;
+  retain?: number;
+  waitingTime?: number;
+};
+
+export type OverrideGlob = {
+  glob: string;
+  retain: number;
+  waitingTime: number;
 };
 
 export function getTabs({ isOnlyActiveGroup = false as boolean } = {}) {
@@ -55,7 +65,31 @@ export function compareTabAndTabInfo(tab: vscode.Tab, tabInfo: TabInfo) {
   return tabKey === tabInfo.key;
 }
 
-export function transformTabIntoTabInfo(tab: vscode.Tab): TabInfo {
+export function transformTabIntoTabInfo(
+  tab: vscode.Tab,
+  overrideGlops?: OverrideGlob[]
+): TabInfo {
+  if (overrideGlops) {
+    const match = overrideGlops.find((overrideGlob) => {
+      try {
+        // prettier-ignore
+        // @ts-ignore
+        return minimatch(tab.input.uri.fsPath as string, overrideGlob.glob);
+      } catch {
+        return false;
+      }
+    });
+    if (match) {
+      return {
+        key: createTabInfoTimerKey(tab),
+        tab,
+        tabGroup: tab.group,
+        retain: match.retain,
+        waitingTime: match.waitingTime,
+      };
+    }
+  }
+
   return {
     key: createTabInfoTimerKey(tab),
     tab,

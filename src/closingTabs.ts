@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { ClosingTabsProvider, FileItem } from "./closingTabsView";
+import { ClosingTabsProvider } from "./closingTabsView";
 import {
   TabInfo,
   compareTabAndTabInfo,
@@ -11,28 +11,58 @@ import {
   logOutputChannel,
   type Config,
   logOutputChannels,
+  OverrideGlob,
 } from "./common";
+import { log } from "console";
 
 type TabInfoTimer = [TabInfo, NodeJS.Timeout];
 
 export class ClosingTabs {
-  closingTabsProvider: ClosingTabsProvider;
+  private closingTabsProvider: ClosingTabsProvider;
 
-  enableAutoClose: boolean;
-  retainingTabCount: number = 10;
-  waitingTime: number = 10;
-  isDirtyTabRemovalAllowed: boolean = false;
-  isActiveTabRemovalAllowed: boolean = false;
-  isShiftByPinnedTab: boolean = true;
+  private enableAutoClose: boolean;
+  private retainingTabCount: number = 10;
+  private waitingTime: number = 10;
+  private isDirtyTabRemovalAllowed: boolean = false;
+  private isActiveTabRemovalAllowed: boolean = false;
+  private isShiftByPinnedTab: boolean = true;
 
-  tabInfoTimers: Map<string, TabInfoTimer> = new Map();
-  intervalId?: NodeJS.Timeout;
+  private tabInfoTimers: Map<string, TabInfoTimer> = new Map();
+  private intervalId?: NodeJS.Timeout;
+
+  private overrideGlobList: {
+    glob: string;
+    retain: number;
+    waitingTime: number;
+  }[] = [];
 
   constructor(
     props: Config & {
       closingTabsProvider: ClosingTabsProvider;
     }
   ) {
+    function transformOverrideGlobList(obj: { [glob: string]: string }) {
+      const overrideGlobList = obj;
+      const overrideGlobListArray = Object.entries(overrideGlobList).reduce<
+        OverrideGlob[]
+      >((acc, [glob, retainAndWaitingTime]) => {
+        try {
+          const [retain, waitingTime] = retainAndWaitingTime.split(",");
+          const item = {
+            glob,
+            retain: parseInt(retain),
+            waitingTime: parseInt(waitingTime),
+          };
+          acc.push(item);
+        } catch (error) {
+          // Exclude errors
+          logOutputChannel(`Parse error: [${glob}, ${retainAndWaitingTime}]`);
+        }
+        return acc;
+      }, []);
+      return overrideGlobListArray;
+    }
+
     this.closingTabsProvider = props.closingTabsProvider;
     this.enableAutoClose = props.enableAutoClose;
     this.retainingTabCount = props.retainingTabCount;
@@ -40,10 +70,11 @@ export class ClosingTabs {
     this.isShiftByPinnedTab = props.isShiftByPinnedTab;
     this.isDirtyTabRemovalAllowed = props.isActiveTabRemovalAllowed;
     this.isActiveTabRemovalAllowed = props.isActiveTabRemovalAllowed;
+    this.overrideGlobList = transformOverrideGlobList(props.overrideGlobList);
 
-    this.intervalId = setInterval(() => {
-      this.debugLog();
-    }, 10000);
+    // this.intervalId = setInterval(() => {
+    //   this.debugLog();
+    // }, 10000);
   }
 
   initializeAutoClose() {
@@ -65,15 +96,23 @@ export class ClosingTabs {
 
   private initializeRemovingTabs = () => {
     const tabs = getTabs();
-    const tabInfoArray = tabs.map(transformTabIntoTabInfo);
+    const tabInfoArray = tabs.map((tab) =>
+      transformTabIntoTabInfo(tab, this.overrideGlobList)
+    );
     tabInfoArray.map(this.resetTimer);
   };
 
   private setResettingTimers = (e: vscode.TabChangeEvent) => {
-    e.changed.forEach((tab) => this.resetTimer(transformTabIntoTabInfo(tab)));
-    e.opened.forEach((tab) => this.resetTimer(transformTabIntoTabInfo(tab)));
+    e.changed.forEach((tab) =>
+      this.resetTimer(transformTabIntoTabInfo(tab, this.overrideGlobList))
+    );
+    e.opened.forEach((tab) =>
+      this.resetTimer(transformTabIntoTabInfo(tab, this.overrideGlobList))
+    );
     e.closed.forEach((tab) => {
-      const tabInfoTimer = this.findTabInfoTimer(transformTabIntoTabInfo(tab));
+      const tabInfoTimer = this.findTabInfoTimer(
+        transformTabIntoTabInfo(tab, this.overrideGlobList)
+      );
       if (tabInfoTimer) {
         clearTimeout(tabInfoTimer[1]);
         this.tabInfoTimers.delete(tabInfoTimer[0].key);
@@ -91,7 +130,7 @@ export class ClosingTabs {
         clearInterval(timer);
         this.tabInfoTimers.delete(tabInfo.key);
       }
-    }, this.waitingTime * 1000);
+    }, (tabInfo.waitingTime ?? this.waitingTime) * 1000);
     this.tabInfoTimers.set(tabInfo.key, [tabInfo, timer]);
   };
 
@@ -102,14 +141,14 @@ export class ClosingTabs {
 
   private removeTabIfApplicable = (tabInfo: TabInfo) => {
     const [tab, index, tabs] = this.findTab(tabInfo);
-    const shiftRemains = this.isShiftByPinnedTab
+    const shiftRetains = this.isShiftByPinnedTab
       ? filterTabs(tabs, "isPinned").length
       : 0;
 
     if (
       tab &&
       this.shouldRemoveTab(tab) &&
-      !this.isTabIndexLessThanRetainingTabCount(index, shiftRemains)
+      !this.isIndexWithinRetainingRange(index, shiftRetains, tabInfo.retain)
     ) {
       this.closeTab(tab);
       this.closingTabsProvider.refresh(transformTabInfoIntoFileItem(tabInfo));
@@ -125,11 +164,14 @@ export class ClosingTabs {
     vscode.window.tabGroups.close(tab);
   };
 
-  private isTabIndexLessThanRetainingTabCount = (
-    index: number,
-    shift: number
+  private isIndexWithinRetainingRange = (
+    index: number, // zero based
+    shift: number,
+    overrideRetain?: number
   ) => {
-    return index < this.retainingTabCount + 0;
+    const retain = (overrideRetain ?? this.retainingTabCount) + shift;
+    logOutputChannel(`isIndexWithinRetainingRange: ${index}  ${retain}`);
+    return index < (retain > 0 ? retain : 1);
   };
 
   private shouldRemoveTab = (tab: vscode.Tab) => {

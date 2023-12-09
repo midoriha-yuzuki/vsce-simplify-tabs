@@ -4,7 +4,7 @@ import * as vscode from "vscode";
 import { ClosingTabsProvider } from "./closingTabsView";
 import { ClosingTabs } from "./closingTabs";
 import { leftAlignmentTabs } from "./alignLeftTabs";
-import { logOutputChannel } from "./common";
+import { Config, logOutputChannel } from "./common";
 
 let closingTabs: ClosingTabs;
 let alignLeftTabs: leftAlignmentTabs;
@@ -89,7 +89,7 @@ const getTabs = ({ isOnlyActiveGroup = false as boolean } = {}) => {
   return tabs;
 };
 
-function getConfig() {
+function getConfig(): Config {
   let enableAutoClose = true;
   let retainingTabCount = 10;
   let waitingTime = 10;
@@ -104,33 +104,46 @@ function getConfig() {
   let delayTime = 5;
   let canMovePinnedTab = true;
 
-  const config = vscode.workspace.getConfiguration();
-  return {
+  let workspaceFolder = vscode.workspace.workspaceFolders
+    ? vscode.workspace.workspaceFolders[0].uri
+    : null;
+  if (!workspaceFolder) {
+    throw new Error("No workspace folder found.");
+  }
+
+  const vsConfig = vscode.workspace.getConfiguration();
+
+  const config = {
     enableAutoClose:
-      config.get<boolean>("simplifyTabs.closeTabs.enabled") ?? enableAutoClose,
+      vsConfig.get<boolean>("simplifyTabs.closeTabs.enabled") ??
+      enableAutoClose,
     retainingTabCount:
-      config.get<number>("simplifyTabs.closeTabs.retentionNumber") ??
+      vsConfig.get<number>("simplifyTabs.closeTabs.retentionNumber") ??
       retainingTabCount,
     waitingTime:
-      config.get<number>("simplifyTabs.closeTabs.delay") ?? waitingTime,
+      vsConfig.get<number>("simplifyTabs.closeTabs.delay") ?? waitingTime,
     isShiftByPinnedTab:
-      config.get<boolean>("simplifyTabs.closeTabs.shiftByPinnedTab") ??
+      vsConfig.get<boolean>("simplifyTabs.closeTabs.shiftByPinnedTab") ??
       isShiftByPinnedTab,
+    overrideGlobList:
+      vsConfig.get<boolean>("simplifyTabs.closeTabs.overrideGlobList") ?? {},
     isDirtyTabRemovalAllowed: isDirtyTabRemovalAllowed,
     // config.get<boolean>("simplifyTabs.closeTabs.isDirtyTabRemovalAllowed") ?? isDirtyTabRemovalAllowed,
     isActiveTabRemovalAllowed: isActiveTabRemovalAllowed,
     // config.get<boolean>("simplifyTabs.closeTabs.isActiveTabRemovalAllowed") ?? isActiveTabRemovalAllowed,
     maximumDisplayCount:
-      config.get<number>("simplifyTabs.closedTabsHistory.maxListItems") ??
+      vsConfig.get<number>("simplifyTabs.closedTabsHistory.maxListItems") ??
       maximumDisplayCount,
     enableAutoMove:
-      config.get<boolean>("simplifyTabs.alignLeftTabs.enabled") ??
+      vsConfig.get<boolean>("simplifyTabs.alignLeftTabs.enabled") ??
       enableAutoMove,
     delayTime:
-      config.get<number>("simplifyTabs.alignLeftTabs.delay") ?? delayTime,
+      vsConfig.get<number>("simplifyTabs.alignLeftTabs.delay") ?? delayTime,
     canMovePinnedTab:
-      config.get<boolean>("simplifyTabs.alignLeftTabs.movePinnedTab") ??
+      vsConfig.get<boolean>("simplifyTabs.alignLeftTabs.movePinnedTab") ??
       canMovePinnedTab,
     movingPosition: 1,
   };
+
+  return config;
 }
