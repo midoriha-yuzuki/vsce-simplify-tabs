@@ -10,9 +10,12 @@ Simplify Tabs automatically organizes cluttered tabs. Frequently used tabs are m
 
 ## Installation
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+```
+code --install-extension yuzuki.simplify-tabs
+```
+
+Or simply by searching for `yuzuki.simplify-tabs` in the [VSCode marketplace](https://marketplace.visualstudio.com/items?itemName=yuzuki.simplify-tabs)
 
 ---
 
 **Enjoy!**
-

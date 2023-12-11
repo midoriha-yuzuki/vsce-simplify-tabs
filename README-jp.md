@@ -1,6 +1,6 @@
 # Simplify Tabs
 
-Simplify Tabsは雑然としたタブを自動で整理します。よく使うタブは左に、そして使われていないタブは一定時間の後に閉じられます。また、index.jsなどの特定のファイルに対してルールを設定できます。
+Simplify Tabs は雑然としたタブを自動で整理します。よく使うタブは左に、そして使われていないタブは一定時間の後に閉じられます。また、index.js などの特定のファイルに対してルールを設定できます。
 
 ## Features
 
@@ -10,15 +10,12 @@ Simplify Tabsは雑然としたタブを自動で整理します。よく使う�
 
 ## Installation
 
-
-
 ```
-code --install-extension
+code --install-extension yuzuki.simplify-tabs
 ```
 
-Or simply by searching for `simplify-tabs` in the [VSCode marketplace](https://marketplace.visualstudio.com/items?itemName=xxxxxxxx.simplify-tabs)
+Or simply by searching for `yuzuki.simplify-tabs` in the [VSCode marketplace](https://marketplace.visualstudio.com/items?itemName=yuzuki.simplify-tabs)
 
 ---
 
 **Enjoy!**
-
