@@ -1,24 +1,7 @@
 import * as vscode from "vscode";
-import { FileItem } from "./closingTabsView";
+import { FileItem } from "./closedTabsTreeDataProvider";
 import { outputChanel } from "./extension";
 import { minimatch } from "minimatch";
-
-export type Config = {
-  enableAutoClose: boolean;
-  retainingTabCount: number;
-  waitingTime: number;
-  isShiftByPinnedTab: boolean;
-  isDirtyTabRemovalAllowed: boolean;
-  isActiveTabRemovalAllowed: boolean;
-  overrideGlobList: { [glob: string]: string };
-
-  maximumDisplayCount: number;
-
-  enableAutoMove: boolean;
-  movingPosition: number; // not config option
-  delayTime: number;
-  canMovePinnedTab: boolean;
-};
 
 export type TabInfo = {
   key: string;
@@ -28,10 +11,26 @@ export type TabInfo = {
   waitingTime?: number;
 };
 
-export type OverrideGlob = {
+export type OverridingTab = {
   glob: string;
-  retain: number;
+  tabRetentionCount: number;
   waitingTime: number;
+};
+
+export type Config = {
+  enableClosing: boolean;
+  tabRetentionCount: number;
+  waitingTime: number;
+  isShiftByPinned: boolean;
+  isDirtyTabRemovalAllowed: boolean;
+  isActiveTabRemovalAllowed: boolean;
+  overridingTabList: OverridingTab[];
+  maximumDisplayCount: number;
+  enableLeftAlignment: boolean;
+  /* not vscode configure option */
+  position: number;
+  delayTime: number;
+  isAlignPinned: boolean;
 };
 
 export function getTabs({ isOnlyActiveGroup = false as boolean } = {}) {
@@ -45,7 +44,7 @@ export function getTabs({ isOnlyActiveGroup = false as boolean } = {}) {
   return tabs;
 }
 
-// key must be boolean key of Tab
+// key must be boolean type key of Tab
 export function filterTabs(tabs: vscode.Tab[], key: keyof vscode.Tab) {
   return tabs.filter((tab) => tab[key]);
 }
@@ -67,7 +66,7 @@ export function compareTabAndTabInfo(tab: vscode.Tab, tabInfo: TabInfo) {
 
 export function transformTabIntoTabInfo(
   tab: vscode.Tab,
-  overrideGlops?: OverrideGlob[]
+  overrideGlops?: OverridingTab[]
 ): TabInfo {
   if (overrideGlops) {
     const match = overrideGlops.find((overrideGlob) => {
@@ -84,7 +83,7 @@ export function transformTabIntoTabInfo(
         key: createTabInfoTimerKey(tab),
         tab,
         tabGroup: tab.group,
-        retain: match.retain,
+        retain: match.tabRetentionCount,
         waitingTime: match.waitingTime,
       };
     }
@@ -122,6 +121,7 @@ function createTabInfoTimerKey(tab: vscode.Tab) {
   return `[${tab.group.viewColumn}]:${name}`;
 }
 
+const PREF = "Simplify-Tabs: ";
 export function logInfo(...args: any[]) {
   console.log(PREF, ...args);
 }
@@ -135,4 +135,6 @@ export const logOutputChannels = (args: string[]) => {
   });
 };
 
-const PREF = "Simplify-Tabs: ";
+export function throwError(message: string = "") {
+  throw new Error(message);
+}

@@ -1,30 +1,30 @@
 import * as vscode from "vscode";
 import { filterTabs, getTabs, logOutputChannel, type Config } from "./common";
 
-export class leftAlignmentTabs {
-  enableAutoMove: boolean;
-  movingPosition: number;
+export class TabLeftAligner {
+  enableLeftAlignment: boolean;
+  position: number; // start from 1
   delayTime: number;
-  canMovePinnedTab: boolean;
+  isAlignPinned: boolean;
 
   constructor(config: Config) {
-    this.enableAutoMove = config.enableAutoMove;
-    this.movingPosition = config.movingPosition;
+    this.enableLeftAlignment = config.enableLeftAlignment;
+    this.position = config.position;
     this.delayTime = config.delayTime;
-    this.canMovePinnedTab = config.canMovePinnedTab;
+    this.isAlignPinned = config.isAlignPinned;
   }
 
-  initializeAutoMove() {
+  start() {
     let disposable: vscode.Disposable | null = null;
-    if (this.enableAutoMove) {
+    if (this.enableLeftAlignment) {
       disposable = vscode.window.onDidChangeActiveTextEditor(
-        this.setMovingTimer
+        this.setLeftAlignTimer
       );
     }
     return { disposable };
   }
 
-  private setMovingTimer = (e: vscode.TextEditor | undefined) => {
+  private setLeftAlignTimer = (e: vscode.TextEditor | undefined) => {
     if (!e) {
       return;
     }
@@ -35,17 +35,16 @@ export class leftAlignmentTabs {
       const tabs$2 = getTabs({ isOnlyActiveGroup: true });
       const nextActiveTab = filterTabs(tabs$2, "isActive")[0];
       if (prevActiveTab === nextActiveTab) {
-        const pinned = filterTabs(tabs$2, "isPinned").length;
-        let position = 1;
-        if (nextActiveTab.isPinned && this.canMovePinnedTab) {
-          position =
-            pinned >= this.movingPosition ? this.movingPosition : pinned;
+        const pinnedLength = filterTabs(tabs$2, "isPinned").length;
+        if (nextActiveTab.isPinned && this.isAlignPinned) {
+          const position =
+            pinnedLength >= this.position ? this.position : pinnedLength;
           moveActiveEditor(position);
           logOutputChannel(
             `Move tab. position: ${position} label: ${nextActiveTab.label}`
           );
         } else if (!nextActiveTab.isPinned) {
-          position = pinned > 0 ? pinned + 1 : this.movingPosition;
+          const position = pinnedLength > 0 ? pinnedLength + 1 : this.position;
           moveActiveEditor(position);
           logOutputChannel(
             `Move tab. position: ${position} label: ${nextActiveTab.label}`

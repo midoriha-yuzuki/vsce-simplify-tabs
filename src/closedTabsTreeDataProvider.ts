@@ -18,15 +18,16 @@ export class FileItem extends vscode.TreeItem {
   }
 }
 
-export class ClosingTabsProvider implements vscode.TreeDataProvider<FileItem> {
-  fileItems: FileItem[];
+export class ClosedTabsTreeDataProvider
+  implements vscode.TreeDataProvider<FileItem>
+{
+  private maximumDisplayCount: number;
+  private fileItems: FileItem[];
   private _onDidChangeTreeData: vscode.EventEmitter<
     FileItem | undefined | void
   > = new vscode.EventEmitter<FileItem | undefined | void>();
   onDidChangeTreeData: vscode.Event<FileItem | undefined | void> =
     this._onDidChangeTreeData.event;
-
-  maximumDisplayCount: number;
 
   constructor(props: Config) {
     this.fileItems = [];
@@ -35,7 +36,9 @@ export class ClosingTabsProvider implements vscode.TreeDataProvider<FileItem> {
 
   refresh(fileItem?: FileItem): void {
     if (fileItem) {
-      this.fileItems = this.fileItems.filter((item) => item.id !== fileItem.id);
+      this.fileItems = this.fileItems.filter(
+        (fItem) => fItem.id !== fileItem.id
+      );
       this.fileItems.unshift(fileItem);
     }
 

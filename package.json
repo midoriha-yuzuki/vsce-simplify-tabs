@@ -2,12 +2,15 @@
   "name": "simplify-tabs",
   "displayName": "Simplify Tabs",
   "description": "Automatically organize tabs and close unnecessary ones to maintain a simple tab layout.",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "engines": {
     "vscode": "^1.85.0"
   },
   "categories": [
     "Other"
+  ],
+  "keywords": [
+    "tabs"
   ],
   "activationEvents": [
     "onStartupFinished"
@@ -71,12 +74,6 @@
         }
       }
     ],
-    "commands": [
-      {
-        "command": "simplifyTabs.refreshClosingTabsView",
-        "title": "Refresh ClosingTabsView"
-      }
-    ],
     "views": {
       "explorer": [
         {
@@ -87,13 +84,13 @@
     }
   },
   "scripts": {
-    "vscode:prepublish": "pnpm run package",
+    "vscode:prepublish": "npm run package",
     "compile": "webpack",
     "watch": "webpack --watch",
     "package": "webpack --mode production --devtool hidden-source-map",
     "compile-tests": "tsc -p . --outDir out",
     "watch-tests": "tsc -p . -w --outDir out",
-    "pretest": "pnpm run compile-tests && pnpm run compile && pnpm run lint",
+    "pretest": "npm run compile-tests && npm run compile && npm run lint",
     "lint": "eslint src --ext ts",
     "test": "vscode-test"
   },

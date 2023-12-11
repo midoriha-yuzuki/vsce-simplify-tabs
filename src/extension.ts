@@ -1,18 +1,23 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from "vscode";
-import { ClosingTabsProvider } from "./closingTabsView";
-import { ClosingTabs } from "./closingTabs";
-import { leftAlignmentTabs } from "./alignLeftTabs";
-import { Config, logOutputChannel } from "./common";
+import { ClosedTabsTreeDataProvider } from "./closedTabsTreeDataProvider";
+import { TabCloser } from "./tabCloser";
+import { TabLeftAligner } from "./tabLeftAligner";
+import {
+  type Config,
+  OverridingTab,
+  logOutputChannel,
+  throwError,
+} from "./common";
 
-let closingTabs: ClosingTabs;
-let alignLeftTabs: leftAlignmentTabs;
+let closingTabs: TabCloser;
+let alignLeftTabs: TabLeftAligner;
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
-  outputChanel = vscode.window.createOutputChannel("Simplify-Tabs");
+  outputChanel = vscode.window.createOutputChannel("Simplify Tabs");
   logOutputChannel("Activate extension. Starting...");
 
   function initialize() {
@@ -20,23 +25,21 @@ export function activate(context: vscode.ExtensionContext) {
     movingTimersDisposable?.dispose();
     const config = getConfig();
 
-    closingTabsProvider = new ClosingTabsProvider(config);
+    closingTabsProvider = new ClosedTabsTreeDataProvider(config);
     vscode.window.registerTreeDataProvider(
       "simplifyTabs.closingTabsView",
       closingTabsProvider
     );
 
-    closingTabs && closingTabs.dispose();
-    closingTabs = new ClosingTabs({
+    closingTabs?.dispose();
+    closingTabs = new TabCloser({
       closingTabsProvider,
       ...config,
     });
-    alignLeftTabs = new leftAlignmentTabs(config);
+    alignLeftTabs = new TabLeftAligner(config);
 
-    ({ disposable: resettingTimersDisposable } =
-      closingTabs.initializeAutoClose());
-    ({ disposable: movingTimersDisposable } =
-      alignLeftTabs.initializeAutoMove());
+    ({ disposable: resettingTimersDisposable } = closingTabs.start());
+    ({ disposable: movingTimersDisposable } = alignLeftTabs.start());
   }
 
   initialize();
@@ -76,74 +79,88 @@ type TabInfo = {
 type TabInfoTimer = [TabInfo, NodeJS.Timeout];
 let tabInfoTimers: Map<string, TabInfoTimer> = new Map();
 
-let closingTabsProvider: ClosingTabsProvider;
-
-const getTabs = ({ isOnlyActiveGroup = false as boolean } = {}) => {
-  const groups = vscode.window.tabGroups;
-  const tabs = (
-    isOnlyActiveGroup ? [groups.activeTabGroup] : groups.all
-  ).reduce((acc, group) => {
-    const tabs = group.tabs;
-    return acc.concat(tabs);
-  }, [] as vscode.Tab[]);
-  return tabs;
-};
+let closingTabsProvider: ClosedTabsTreeDataProvider;
 
 function getConfig(): Config {
-  let enableAutoClose = true;
-  let retainingTabCount = 10;
-  let waitingTime = 10;
-  let isShiftByPinnedTab = true;
-  let isDirtyTabRemovalAllowed = false;
-  let isActiveTabRemovalAllowed = false;
-
-  let maximumDisplayCount: number = 5;
-
-  let enableAutoMove = false;
-  let movingPosition = 1; // not config option
-  let delayTime = 5;
-  let canMovePinnedTab = true;
-
-  let workspaceFolder = vscode.workspace.workspaceFolders
-    ? vscode.workspace.workspaceFolders[0].uri
-    : null;
-  if (!workspaceFolder) {
-    throw new Error("No workspace folder found.");
-  }
-
-  const vsConfig = vscode.workspace.getConfiguration();
-
-  const config = {
-    enableAutoClose:
-      vsConfig.get<boolean>("simplifyTabs.closeTabs.enabled") ??
-      enableAutoClose,
-    retainingTabCount:
-      vsConfig.get<number>("simplifyTabs.closeTabs.retentionNumber") ??
-      retainingTabCount,
-    waitingTime:
-      vsConfig.get<number>("simplifyTabs.closeTabs.delay") ?? waitingTime,
-    isShiftByPinnedTab:
-      vsConfig.get<boolean>("simplifyTabs.closeTabs.shiftByPinnedTab") ??
-      isShiftByPinnedTab,
-    overrideGlobList:
-      vsConfig.get<boolean>("simplifyTabs.closeTabs.overrideGlobList") ?? {},
-    isDirtyTabRemovalAllowed: isDirtyTabRemovalAllowed,
-    // config.get<boolean>("simplifyTabs.closeTabs.isDirtyTabRemovalAllowed") ?? isDirtyTabRemovalAllowed,
-    isActiveTabRemovalAllowed: isActiveTabRemovalAllowed,
-    // config.get<boolean>("simplifyTabs.closeTabs.isActiveTabRemovalAllowed") ?? isActiveTabRemovalAllowed,
-    maximumDisplayCount:
-      vsConfig.get<number>("simplifyTabs.closedTabsHistory.maxListItems") ??
-      maximumDisplayCount,
-    enableAutoMove:
-      vsConfig.get<boolean>("simplifyTabs.alignLeftTabs.enabled") ??
-      enableAutoMove,
-    delayTime:
-      vsConfig.get<number>("simplifyTabs.alignLeftTabs.delay") ?? delayTime,
-    canMovePinnedTab:
-      vsConfig.get<boolean>("simplifyTabs.alignLeftTabs.movePinnedTab") ??
-      canMovePinnedTab,
-    movingPosition: 1,
+  const base: Config = {
+    enableClosing: true,
+    tabRetentionCount: 8,
+    waitingTime: 600,
+    isShiftByPinned: true,
+    maximumDisplayCount: 20,
+    enableLeftAlignment: true,
+    delayTime: 5,
+    isAlignPinned: false,
+    overridingTabList: [],
+    /* not vscode configure option */
+    isDirtyTabRemovalAllowed: false,
+    isActiveTabRemovalAllowed: false,
+    position: 1,
   };
 
-  return config;
+  const vsConfig = vscode.workspace.getConfiguration();
+  const config = {
+    enableClosing:
+      vsConfig.get<boolean>("simplifyTabs.closeTabs.enabled") ??
+      base.enableClosing,
+    tabRetentionCount:
+      vsConfig.get<number>("simplifyTabs.closeTabs.retentionNumber") ??
+      base.tabRetentionCount,
+    waitingTime:
+      vsConfig.get<number>("simplifyTabs.closeTabs.delay") ?? base.waitingTime,
+    isShiftByPinned:
+      vsConfig.get<boolean>("simplifyTabs.closeTabs.shiftByPinnedTab") ??
+      base.isShiftByPinned,
+    maximumDisplayCount:
+      vsConfig.get<number>("simplifyTabs.closedTabsHistory.maxListItems") ??
+      base.maximumDisplayCount,
+    enableLeftAlignment:
+      vsConfig.get<boolean>("simplifyTabs.alignLeftTabs.enabled") ??
+      base.enableLeftAlignment,
+    delayTime:
+      vsConfig.get<number>("simplifyTabs.alignLeftTabs.delay") ??
+      base.delayTime,
+    canMovePinnedTab:
+      vsConfig.get<boolean>("simplifyTabs.alignLeftTabs.movePinnedTab") ??
+      base.isAlignPinned,
+    overridingList:
+      transformOverrideGlobList(
+        vsConfig.get<{
+          [glob: string]: string;
+        }>("simplifyTabs.closeTabs.overrideGlobList") ?? {}
+      ) ?? [],
+  };
+
+  return {
+    ...base,
+    ...config,
+  } satisfies Config;
+
+  function transformOverrideGlobList(obj: { [glob: string]: string }) {
+    const overrideGlobList = obj;
+    const overrideGlobListArray = Object.entries(overrideGlobList).reduce<
+      OverridingTab[]
+    >((acc, [glob, retainAndWaitingTime]) => {
+      try {
+        const [retain, waitingTime] = retainAndWaitingTime.split(",");
+        const item = {
+          glob,
+          tabRetentionCount: parseIntWithThrow(retain),
+          waitingTime: parseIntWithThrow(waitingTime),
+        } satisfies OverridingTab;
+        acc.push(item);
+      } catch (error) {
+        // Exclude errors
+        logOutputChannel(`Parse error: [${glob}, ${retainAndWaitingTime}]`);
+      }
+      return acc;
+
+      function parseIntWithThrow(numString: string) {
+        const num = parseInt(numString);
+        isNaN(num) && throwError("Parse error");
+        return num;
+      }
+    }, []);
+    return overrideGlobListArray;
+  }
 }
