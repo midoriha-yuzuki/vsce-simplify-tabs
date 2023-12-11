@@ -3,7 +3,7 @@
   "displayName": "Simplify Tabs",
   "publisher": "yuzuki",
   "description": "Automatically organize tabs and close unnecessary ones to maintain a simple tab layout.",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "icon": "assets/icon.png",
   "repository": {
     "type": "git",
